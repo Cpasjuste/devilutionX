@@ -581,8 +581,10 @@ void CheckInvPaste(int pnum, Point cursorPosition)
 	}
 	CalcPlrInv(player, true);
 	if (pnum == MyPlayerId) {
-		if (cn == CURSOR_HAND && !IsHardwareCursor())
+		if (cn == CURSOR_HAND && !IsHardwareCursor()) {
+			Size cursSize = GetInvItemSize(MyPlayer->HoldItem._iCurs + CURSOR_FIRSTITEM);
 			SetCursorPos(MousePosition + Displacement(cursSize / 2));
+		}
 		NewCursor(cn);
 	}
 }
@@ -856,6 +858,7 @@ void CheckInvCut(int pnum, Point cursorPosition, bool automaticMove, bool dropIt
 				NewCursor(holdItem._iCurs + CURSOR_FIRSTITEM);
 				if (!IsHardwareCursor() && !dropItem) {
 					// For a hardware cursor, we set the "hot point" to the center of the item instead.
+					Size cursSize = GetInvItemSize(holdItem._iCurs + CURSOR_FIRSTITEM);
 					SetCursorPos(cursorPosition - Displacement(cursSize / 2));
 				}
 			}
@@ -1596,7 +1599,7 @@ void TransferItemToStash(Player &player, int location)
 
 void CheckInvItem(bool isShiftHeld, bool isCtrlHeld)
 {
-	if (pcurs >= CURSOR_FIRSTITEM) {
+	if (!MyPlayer->HoldItem.isEmpty()) {
 		CheckInvPaste(MyPlayerId, MousePosition);
 	} else if (IsStashOpen && isCtrlHeld) {
 		TransferItemToStash(*MyPlayer, pcursinvitem);
@@ -1627,7 +1630,7 @@ void InvGetItem(int pnum, int ii)
 
 	auto &player = Players[pnum];
 
-	if (MyPlayerId == pnum && pcurs >= CURSOR_FIRSTITEM)
+	if (MyPlayerId == pnum && !player.HoldItem.isEmpty())
 		NetSendCmdPItem(true, CMD_SYNCPUTITEM, player.position.tile, player.HoldItem);
 
 	item._iCreateInfo &= ~CF_PREGEN;
@@ -1635,12 +1638,11 @@ void InvGetItem(int pnum, int ii)
 	CheckQuestItem(player, player.HoldItem);
 	UpdateBookLevel(player, player.HoldItem);
 	player.HoldItem._iStatFlag = player.CanUseItem(player.HoldItem);
-	bool cursorUpdated = false;
 	if (player.HoldItem._itype == ItemType::Gold && GoldAutoPlace(player, player.HoldItem))
-		cursorUpdated = true;
+		player.HoldItem._itype == ItemType::None;
 	CleanupItems(ii);
 	pcursitem = -1;
-	if (!cursorUpdated)
+	if (!player.HoldItem.isEmpty())
 		NewCursor(player.HoldItem._iCurs + CURSOR_FIRSTITEM);
 }
 
